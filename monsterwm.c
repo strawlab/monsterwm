@@ -155,6 +155,7 @@ static void stack(int h, int y);
 static void swap_master();
 static void switch_mode(const Arg *arg);
 static void tile(void);
+static void showhide();
 static void togglepanel();
 static void update_current(client *c);
 static void unmapnotify(XEvent *e);
@@ -164,7 +165,7 @@ static int xerrorstart();
 
 #include "config.h"
 
-static Bool running = True, showpanel = SHOW_PANEL;
+static Bool running = True, showpanel = SHOW_PANEL, showall = True;
 static int previous_desktop = 0, current_desktop = 0, retval = 0;
 static int screen, wh, ww, mode = DEFAULT_MODE, master_size = 0, growth = 0;
 static int (*xerrorxlib)(Display *, XErrorEvent *);
@@ -230,8 +231,8 @@ void change_desktop(const Arg *arg) {
     if (arg->i == current_desktop) return;
     previous_desktop = current_desktop;
     select_desktop(arg->i);
-    if (current) XMapWindow(dis, current->win);
-    for (client *c=head; c; c=c->next) XMapWindow(dis, c->win);
+    if (showall && current) XMapWindow(dis, current->win);
+    for (client *c=head; c && showall; c=c->next) XMapWindow(dis, c->win);
     select_desktop(previous_desktop);
     for (client *c=head; c; c=c->next) if (c != current) XUnmapWindow(dis, c->win);
     if (current) XUnmapWindow(dis, current->win);
@@ -493,7 +494,7 @@ void maprequest(XEvent *e) {
     if (state) XFree(state);
 
     if (cd != newdsk) select_desktop(cd);
-    if (cd == newdsk) { tile(); XMapWindow(dis, c->win); update_current(c); }
+    if (cd == newdsk && showall) { tile(); XMapWindow(dis, c->win); update_current(c); }
     else if (follow) { change_desktop(&(Arg){.i = newdsk}); update_current(c); }
     grabbuttons(c);
 
@@ -901,6 +902,13 @@ void tile(void) {
     if (!head || mode == FLOAT) return; /* nothing to arange */
     layout[head->next ? mode:MONOCLE](wh + (showpanel ? 0:PANEL_HEIGHT),
                               (TOP_PANEL && showpanel ? PANEL_HEIGHT:0));
+}
+
+/* hide or show all windows in current desktop */
+void showhide() {
+    showall = !showall;
+    for (client *c=head; c; c=c->next) (showall) ? XMapWindow(dis, c->win) : XUnmapWindow(dis, c->win);
+    update_current(current);
 }
 
 /* toggle visibility state of the panel */
