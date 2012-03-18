@@ -89,7 +89,7 @@ typedef struct client {
  * showpanel    - the visibility status of the panel
  */
 typedef struct {
-    int mode, growth;
+    int mode, growth, nm;
     float master_size;
     client *head, *current, *prevfocus;
     Bool showpanel;
@@ -135,6 +135,7 @@ static void move_up();
 static void moveresize(const Arg *arg);
 static void mousemotion(const Arg *arg);
 static void next_win();
+static void nmaster(const Arg *arg);
 static client* prev_client(client *c);
 static void prev_win();
 static void propertynotify(XEvent *e);
@@ -166,7 +167,7 @@ static int xerrorstart();
 
 static Bool running = True, showpanel = SHOW_PANEL;
 static int previous_desktop = 0, current_desktop = 0, retval = 0;
-static int screen, wh, ww, mode = DEFAULT_MODE, master_size = 0, growth = 0;
+static int screen, wh, ww, mode = DEFAULT_MODE, master_size = 0, growth = 0, nm = 1;
 static int (*xerrorxlib)(Display *, XErrorEvent *);
 static unsigned int numlockmask = 0, win_unfocus, win_focus;
 static Display *dis;
@@ -640,6 +641,12 @@ void next_win(void) {
     update_current(current->next ? current->next:head);
 }
 
+/* add or remove windows to the master area */
+void nmaster(const Arg *arg) {
+    if (nm + arg->i >= 1) nm += arg->i;
+    tile();
+}
+
 /* get the previous client from the given
  * if no such client, return NULL */
 client* prev_client(client *c) {
@@ -681,13 +688,14 @@ void quit(const Arg *arg) {
  * else if c was the current one, current must be updated. */
 void removeclient(client *c) {
     client **p = NULL;
-    int nd = 0, cd = current_desktop;
+    int n = 0, nd = 0, cd = current_desktop;
     for (Bool found = False; nd<DESKTOPS && !found; nd++)
         for (select_desktop(nd), p = &head; *p && !(found = *p == c); p = &(*p)->next);
     *p = c->next;
     if (c == prevfocus) prevfocus = prev_client(current);
     if (c == current || !head->next) update_current(prevfocus);
     free(c); c = NULL;
+    for (client *t=head; t; t=t->next, n++);
     if (cd == nd -1) tile(); else select_desktop(cd);
 }
 
@@ -735,6 +743,7 @@ void save_desktop(int i) {
     desktops[i].current     = current;
     desktops[i].showpanel   = showpanel;
     desktops[i].prevfocus   = prevfocus;
+    desktops[i].nm          = nm;
 }
 
 /* set the specified desktop's properties */
@@ -748,6 +757,7 @@ void select_desktop(int i) {
     current         = desktops[i].current;
     showpanel       = desktops[i].showpanel;
     prevfocus       = desktops[i].prevfocus;
+    nm              = desktops[i].nm;
     current_desktop = i;
 }
 
@@ -824,7 +834,7 @@ void spawn(const Arg *arg) {
 /* arrange windows in normal or bottom stack tile */
 void stack(int hh, int cy) {
     client *c = NULL, *t = NULL; Bool b = mode == BSTACK;
-    int n = 0, d = 0, z = b ? ww:hh, ma = (mode == BSTACK ? wh:ww) * MASTER_SIZE + master_size;
+    int n = 0, d = 0, z = b ? ww:hh, ma = (mode == BSTACK ? wh:ww) * MASTER_SIZE + master_size, w = nm;
 
     /* count stack windows and grab first non-floating, non-fullscreen window */
     for (t = head; t; t=t->next) if (!ISFFT(t)) { if (c) ++n; else c = t; }
@@ -856,14 +866,17 @@ void stack(int hh, int cy) {
     if (!c) return; else if (!n) {
         XMVRSZ(dis, c->win, 0, cy, ww - 2*BORDER_WIDTH, hh - 2*BORDER_WIDTH);
         return;
-    } else if (n > 1) { d = (z - growth)%n + growth; z = (z - growth)/n; }
+    } else if (n - nm > 0) { d = (z - growth)%(n-nm+1) + growth; z = (z - growth)/(n-nm+1);
+    } else w = n;
 
     /* tile the first non-floating, non-fullscreen window to cover the master area */
-    if (b) XMVRSZ(dis, c->win, 0, cy, ww - 2*BORDER_WIDTH, ma - BORDER_WIDTH);
-    else   XMVRSZ(dis, c->win, 0, cy, ma - BORDER_WIDTH, hh - 2*BORDER_WIDTH);
+    for (int i=0; i<w; i++) {
+        if (b) XMVRSZ(dis, c->win, i*ww/w, cy, ww/w - 2*BORDER_WIDTH, ma - BORDER_WIDTH);
+        else   XMVRSZ(dis, c->win, 0, cy + i*hh/w, ma - BORDER_WIDTH, hh/w - 2*BORDER_WIDTH);
+        for (c=c->next; c && ISFFT(c); c=c->next);
+    }
 
     /* tile the next non-floating, non-fullscreen (first) stack window with growth|d */
-    for (c=c->next; c && ISFFT(c); c=c->next);
     int cx = b ? 0:ma, cw = (b ? hh:ww) - 2*BORDER_WIDTH - ma, ch = z - BORDER_WIDTH;
     if (b) XMVRSZ(dis, c->win, cx, cy += ma, ch - BORDER_WIDTH + d, cw);
     else   XMVRSZ(dis, c->win, cx, cy, cw, ch - BORDER_WIDTH + d);

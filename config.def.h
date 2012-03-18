@@ -53,6 +53,8 @@ static key keys[] = {
     {  MOD1|SHIFT,       XK_c,          killclient,        {NULL}},
     {  MOD1,             XK_j,          next_win,          {NULL}},
     {  MOD1,             XK_k,          prev_win,          {NULL}},
+    {  MOD1,             XK_d,          nmaster,           {.i = -1}},
+    {  MOD1,             XK_i,          nmaster,           {.i = +1}},
     {  MOD1,             XK_h,          resize_master,     {.i = -10}}, /* decrease size in px */
     {  MOD1,             XK_l,          resize_master,     {.i = +10}}, /* increase size in px */
     {  MOD1,             XK_o,          resize_stack,      {.i = -10}}, /* shrink   size in px */
