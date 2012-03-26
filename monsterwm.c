@@ -69,6 +69,7 @@ typedef struct {
  * isfullscrn  - set when the window is fullscreen
  * isfloating  - set when the window is floating
  * win         - the window this client is representing
+ * title       - the window title
  *
  * istransient is separate from isfloating as floating window can be reset
  * to their tiling positions, while the transients will always be floating
@@ -77,6 +78,7 @@ typedef struct client {
     struct client *next;
     Bool isurgent, istransient, isfullscrn, isfloating;
     Window win;
+    char title[256];
 } client;
 
 /* properties of each desktop
@@ -340,10 +342,11 @@ void desktopinfo(void) {
     int cd = current_desktop, n=0, d=0;
     for (client *c; d<DESKTOPS; d++) {
         for (select_desktop(d), c=head, n=0, urgent=False; c; c=c->next, ++n) if (c->isurgent) urgent = True;
-        fprintf(stdout, "%d:%d:%d:%d:%d%c", d, n, mode, current_desktop == cd, urgent, d+1==DESKTOPS?'\n':' ');
+        fprintf(stdout, "%d:%d:%d:%d:%d ", d, n, mode, current_desktop == cd, urgent);
     }
-    fflush(stdout);
     if (cd != d-1) select_desktop(cd);
+    fprintf(stdout, "%s\n", current ? current->title : "");
+    fflush(stdout);
 }
 
 /* a destroy notification is received when a window is being closed
@@ -491,6 +494,12 @@ void maprequest(XEvent *e) {
               False, XA_ATOM, &da, &di, &dl, &dl, &state) == Success && state)
         setfullscreen(c, (*(Atom *)state == netatoms[NET_FULLSCREEN]));
     if (state) XFree(state);
+
+    XTextProperty name;
+    XGetTextProperty(dis, c->win, &name, XA_WM_NAME);
+    if (name.nitems && name.encoding == XA_STRING) strncpy(c->title, (char *)name.value, sizeof(c->title) - 1);
+    c->title[sizeof(c->title) - 1] = '\0';
+    XFree(name.value);
 
     if (cd != newdsk) select_desktop(cd);
     if (cd == newdsk) { tile(); XMapWindow(dis, c->win); update_current(c); }
@@ -961,6 +970,7 @@ void update_current(client *c) {
     if (CLICK_TO_FOCUS) XUngrabButton(dis, Button1, None, current->win);
 
     XSync(dis, False);
+    desktopinfo();
 }
 
 /* find to which client the given window belongs to */
