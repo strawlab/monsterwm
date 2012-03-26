@@ -22,9 +22,12 @@
 #define BORDER_WIDTH    2         /* window border width */
 #define FOCUS           "#ff950e" /* focused window border color   */
 #define UNFOCUS         "#444444" /* unfocused window border color */
-#define DESKTOPS        4         /* number of desktops - edit DESKTOPCHANGE keys to suit */
+#define DESKTOPS        5         /* number of desktops - edit initlayouts and DESKTOPCHANGE keys to suit */
 #define DEFAULT_DESKTOP 0         /* the desktop to focus on exec */
 #define MINWSZ          50        /* minimum window size in pixels */
+
+/** initial layout modes for each desktops **/
+static const int initlayouts[] = { TILE, BSTACK, GRID, MONOCLE, FLOAT, };
 
 /* open applications to specified desktop with specified mode.
  * if desktop is negative, then current is assumed */
@@ -86,6 +89,7 @@ static key keys[] = {
        DESKTOPCHANGE(    XK_F2,                             1)
        DESKTOPCHANGE(    XK_F3,                             2)
        DESKTOPCHANGE(    XK_F4,                             3)
+       DESKTOPCHANGE(    XK_F4,                             4)
 };
 
 static Button buttons[] = {

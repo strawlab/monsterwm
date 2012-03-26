@@ -774,6 +774,12 @@ void setup(void) {
     wh = XDisplayHeight(dis, screen) - PANEL_HEIGHT;
     for (unsigned int i=0; i<DESKTOPS; i++) save_desktop(i);
 
+    for (unsigned int i=0; i<DESKTOPS && i<LENGTH(initlayouts); i++) {
+        select_desktop(i);
+        mode = initlayouts[i];
+    }
+    select_desktop(0);
+
     win_focus = getcolor(FOCUS);
     win_unfocus = getcolor(UNFOCUS);
 
