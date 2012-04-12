@@ -111,6 +111,7 @@ typedef struct {
 static client* addwindow(Window w);
 static void buttonpress(XEvent *e);
 static void change_desktop(const Arg *arg);
+static void centerwindow();
 static void cleanup(void);
 static void client_to_desktop(const Arg *arg);
 static void clientmessage(XEvent *e);
@@ -238,6 +239,15 @@ void change_desktop(const Arg *arg) {
     select_desktop(arg->i);
     tile(); update_current(current);
     desktopinfo();
+}
+
+/* place the current window in the center of the screen floating */
+void centerwindow() {
+    if (!current) return;
+    XWindowAttributes wa;
+    if (!XGetWindowAttributes(dis, current->win, &wa)) return;
+    if (!current->isfloating) { current->isfloating = True; tile(); }
+    XMoveWindow(dis, current->win, (ww - wa.width)/2, (wh - wa.height)/2);
 }
 
 /* remove all windows in all desktops by sending a delete message */
@@ -483,8 +493,8 @@ void maprequest(XEvent *e) {
 
     if (cd != newdsk) select_desktop(newdsk);
     client *c = addwindow(e->xmaprequest.window);
-    c->istransient = XGetTransientForHint(dis, c->win, &w);
-    c->isfloating = floating || c->istransient;
+    c->isfloating = floating || (c->istransient = XGetTransientForHint(dis, c->win, &w));
+    if (c->isfloating) XMoveWindow(dis, c->win, (ww - wa.width)/2, (wh - wa.height)/2);
 
     int di; unsigned long dl; unsigned char *state = NULL; Atom da;
     if (XGetWindowProperty(dis, c->win, netatoms[NET_WM_STATE], 0L, sizeof da,
