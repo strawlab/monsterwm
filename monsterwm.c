@@ -518,7 +518,7 @@ void maprequest(XEvent *e) {
     if (ch.res_class) XFree(ch.res_class);
     if (ch.res_name) XFree(ch.res_name);
 
-    if (cm != newmon) select_monitor(newmon);
+    if (cm != newmon) select_monitor(newmon); cd = current_desktop;
     if (cd != newdsk) select_desktop(newdsk);
     client *c = addwindow(e->xmaprequest.window);
     c->istransient = XGetTransientForHint(dis, c->win, &w);
@@ -531,8 +531,11 @@ void maprequest(XEvent *e) {
     if (state) XFree(state);
 
     if (cd != newdsk) select_desktop(cd);
-    if (cm != newmon) { tile(); select_monitor(cm); }
-    if (cd == newdsk) { tile(); XMapWindow(dis, c->win); update_current(c); }
+    if (cm != newmon) {
+       if (cd == newdsk) { tile(); XMapWindow(dis, c->win); update_current(c); }
+       select_monitor(cm);
+    }
+    if (cm == newmon && cd == newdsk) { tile(); XMapWindow(dis, c->win); update_current(c); }
     else if (follow) {
         change_monitor(&(Arg){.i = newmon});
         change_desktop(&(Arg){.i = newdsk});
