@@ -582,9 +582,11 @@ void mousemotion(const Arg *arg) {
                    xw>MINWSZ ? xw:wa.width, yh>MINWSZ ? yh:wa.height);
                 else if (arg->i == MOVE) {
                     XMoveWindow(dis, current->win, xw, yh);
-                    if ((monitor = areatomonitor(xw, yh)) != current_monitor) {
+                    if ((monitor = areatomonitor(xw, yh)) != current->monitor) {
+                        client *old = current;
                         client_to_monitor(&(Arg){.i = monitor});
                         select_monitor(monitor);
+                        update_current(old);
                     }
                 }
                 break;
@@ -677,9 +679,17 @@ void move_up(void) {
 /* move and resize a window with the keyboard */
 void moveresize(const Arg *arg) {
     XWindowAttributes wa;
+    int monitor;
     if (!current || !XGetWindowAttributes(dis, current->win, &wa)) return;
     if (!current->isfloating) { current->isfloating = True; tile(); }
-    XMVRSZ(dis, current->win, wa.x + ((int *)arg->v)[0], wa.y + ((int *)arg->v)[1],
+    if ((monitor = areatomonitor(wa.x + ((int *)arg->v)[0], wa.y + ((int *)arg->v)[1]))
+          != current->monitor) {
+       client *old = current;
+       client_to_monitor(&(Arg){.i = monitor});
+       select_monitor(monitor);
+       update_current(old);
+    }
+    XMoveResizeWindow(dis, current->win, wa.x + ((int *)arg->v)[0], wa.y + ((int *)arg->v)[1],
                     wa.width  + ((int *)arg->v)[2], wa.height + ((int *)arg->v)[3]);
 }
 
