@@ -21,6 +21,7 @@
 #define CLEANMASK(mask) (mask & ~(numlockmask | LockMask))
 #define BUTTONMASK      ButtonPressMask|ButtonReleaseMask
 #define ISFFT(c)        (c->isfullscrn || c->isfloating || c->istransient)
+#define MDSK(c)         monitors[c->monitor].desktops[monitors[c->monitor].current_desktop]
 /* wrapper to automatically move/resize windows used by multi-monitor branch */
 #define XMVRSZ(dis, win, x, y, w, h) XMoveResizeWindow(dis, win, wx + (x), wy + (y), w, h)
 
@@ -829,7 +830,8 @@ void setfullscreen(client *c, Bool fullscrn) {
             netatoms[NET_WM_STATE], XA_ATOM, 32, PropModeReplace, (unsigned char*)
             ((c->isfullscrn = fullscrn) ? &netatoms[NET_FULLSCREEN]:0), fullscrn);
     if (fullscrn) XMVRSZ(dis, c->win, 0, 0, ww, wh + PANEL_HEIGHT);
-    XConfigureWindow(dis, c->win, CWBorderWidth, &(XWindowChanges){0,0,0,0,fullscrn?0:BORDER_WIDTH,0,0});
+    XConfigureWindow(dis, c->win, CWBorderWidth, &(XWindowChanges){0,0,0,0,
+          ((!fullscrn && MDSK(c).head && MDSK(c).head->next && MDSK(c).mode != MONOCLE) || c->isfloating)?BORDER_WIDTH:0,0,0});
 }
 
 /* set initial values
