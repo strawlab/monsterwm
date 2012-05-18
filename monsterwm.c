@@ -534,6 +534,7 @@ void maprequest(XEvent *e) {
     if (cm != newmon) {
        if (cd == newdsk) { tile(); XMapWindow(dis, c->win); update_current(c); }
        select_monitor(cm);
+       if (cd == newdsk) update_current(current);
     }
     if (cm == newmon && cd == newdsk) { tile(); XMapWindow(dis, c->win); update_current(c); }
     else if (follow) {
