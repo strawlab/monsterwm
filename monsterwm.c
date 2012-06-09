@@ -524,6 +524,12 @@ void mousemotion(const Arg *arg) {
     if (!current->isfloating) current->isfloating = True;
     tile(); update_current(current);
 
+    XGCValues gv = { .function = GXinvert, .subwindow_mode = IncludeInferiors, .line_width = BORDER_WIDTH };
+    GC gc = XCreateGC(dis, root, GCFunction|GCSubwindowMode|GCLineWidth, &gv);
+    /* draw */
+    if (arg->i == MOVE) XDrawRectangle(dis, root, gc, xw = wa.x, yh = wa.y, wa.width, wa.height);
+    else XDrawRectangle(dis, root, gc, wa.x, wa.y, xw = wa.width, yh = wa.height);
+
     XEvent ev;
     do {
         XMaskEvent(dis, BUTTONMASK|PointerMotionMask|SubstructureRedirectMask, &ev);
@@ -532,14 +538,23 @@ void mousemotion(const Arg *arg) {
                 events[ev.type](&ev);
                 break;
             case MotionNotify:
+                /* clear */
+                if (arg->i == MOVE) XDrawRectangle(dis, root, gc, xw, yh, wa.width, wa.height);
+                else if (arg->i == RESIZE) XDrawRectangle(dis, root, gc, wa.x, wa.y, xw, yh);
                 xw = (arg->i == MOVE ? wa.x:wa.width)  + ev.xmotion.x - rx;
                 yh = (arg->i == MOVE ? wa.y:wa.height) + ev.xmotion.y - ry;
-                if (arg->i == RESIZE) XResizeWindow(dis, current->win,
-                   xw>MINWSZ ? xw:wa.width, yh>MINWSZ ? yh:wa.height);
-                else if (arg->i == MOVE) XMoveWindow(dis, current->win, xw, yh);
+                XSync(dis, False);
+                /* draw */
+                if (arg->i == MOVE) XDrawRectangle(dis, root, gc, xw, yh, wa.width, wa.height);
+                else if (arg->i == RESIZE) XDrawRectangle(dis, root, gc, wa.x, wa.y, xw, yh);
                 break;
         }
     } while(ev.type != ButtonRelease);
+    /* clear */
+    if (arg->i == MOVE) XDrawRectangle(dis, root, gc, xw, yh, wa.width, wa.height);
+    else if (arg->i == RESIZE) XDrawRectangle(dis, root, gc, wa.x, wa.y, xw, yh);
+    if (arg->i == RESIZE) XResizeWindow(dis, current->win, xw>MINWSZ?xw:wa.width, yh>MINWSZ?yh:wa.height);
+    else if (arg->i == MOVE) XMoveWindow(dis, current->win, xw, yh);
     XUngrabPointer(dis, CurrentTime);
 }
 
